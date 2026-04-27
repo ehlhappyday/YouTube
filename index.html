@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>유튜브 모음 블로그</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+      background: #f0f2f5;
+      color: #222;
+    }
+
+    /* ── 헤더 ── */
+    header {
+      background: linear-gradient(135deg, #00AEEF, #0090CC);
+      color: white;
+      padding: 32px 20px 24px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header h1 { font-size: 2rem; letter-spacing: -1px; }
+    header p  { margin-top: 6px; font-size: 0.95rem; opacity: 0.9; }
+
+    /* ── 카테고리 탭 ── */
+    #tab-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      padding: 16px 20px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .tab-btn {
+      padding: 7px 18px;
+      border-radius: 20px;
+      border: 2px solid #00AEEF;
+      background: white;
+      color: #00AEEF;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover, .tab-btn.active {
+      background: #00AEEF;
+      color: white;
+    }
+
+    /* ── 메인 레이아웃 ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 30px 20px 60px;
+    }
+
+    /* ── 비디오 그리드 ── */
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+    }
+    .card.dragging {
+      opacity: 0.4;
+      transform: scale(0.97);
+    }
+    .card.drag-over {
+      border: 2px dashed #00AEEF;
+      transform: scale(1.02);
+    }
+
+    .thumb-wrap {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 */
+      background: #000;
+      cursor: pointer;
+    }
+    .thumb-wrap img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .play-btn {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.25);
+      transition: background 0.2s;
+    }
+    .play-btn:hover { background: rgba(0,0,0,0.45); }
+    .play-btn svg { width: 64px; height: 64px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+
+    .card-body { padding: 14px 16px 16px; }
+    .card-body .category {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #00AEEF;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .card-body h3 {
+      font-size: 1rem;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+    .card-body p {
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.5;
+    }
+    .card-body .date {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: #aaa;
+    }
+
+
+    /* ── 추가 폼 ── */
+    #add-section {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    #add-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      color: #333;
+    }
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .form-row input, .form-row select, .form-row textarea {
+      flex: 1 1 200px;
+      padding: 9px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+    .form-row textarea { min-height: 60px; resize: vertical; }
+    #add-btn {
+      padding: 10px 28px;
+      background: #00AEEF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #add-btn:hover { background: #0090CC; }
+
+    /* ── 내보내기/가져오기 버튼 ── */
+    .io-btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #export-btn { background: #555; color: white; margin-left: 10px; }
+    #export-btn:hover { background: #333; }
+    #import-label { background: #888; color: white; margin-left: 6px; padding: 8px 18px; border-radius: 8px; font-size: 0.88rem; cursor: pointer; }
+    #import-label:hover { background: #666; }
+    #import-file { display: none; }
+
+    /* ── 검색 ── */
+    #search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    #search-bar input {
+      flex: 1;
+      padding: 10px 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    /* ── 빈 상태 ── */
+    #empty-msg {
+      text-align: center;
+      color: #aaa;
+      padding: 60px 0;
+      font-size: 1rem;
+      display: none;
+    }
+
+    /* ── 수정 모달 ── */
+    #edit-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 997;
+      align-items: center;
+      justify-content: center;
+    }
+    #edit-overlay.open { display: flex; }
+    #edit-box {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 560px;
+      padding: 28px;
+    }
+    #edit-box h3 { font-size: 1.05rem; margin-bottom: 18px; color: #333; }
+    #edit-box .form-row { margin-bottom: 10px; }
+    #edit-box .form-row input,
+    #edit-box .form-row textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+    #edit-box .form-row textarea { min-height: 60px; resize: vertical; }
+    #edit-box-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+    #edit-save-btn {
+      padding: 9px 24px;
+      background: #00AEEF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    #edit-cancel-btn {
+      padding: 9px 24px;
+      background: #eee;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    /* ── 네이버 글 생성 버튼 ── */
+    #naver-btn {
+      padding: 10px 28px;
+      background: #03c75a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin-left: 10px;
+      transition: background 0.2s;
+    }
+    #naver-btn:hover { background: #02a84a; }
+
+    /* ── 네이버 글 미리보기 모달 ── */
+    #naver-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 998;
+      align-items: center;
+      justify-content: center;
+    }
+    #naver-overlay.open { display: flex; }
+    #naver-box {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #naver-box-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #naver-box-header h3 { font-size: 1rem; color: #333; }
+    #naver-box-header span { cursor: pointer; font-size: 1.5rem; color: #aaa; }
+    #naver-guide {
+      padding: 12px 20px;
+      background: #fffbe6;
+      border-bottom: 1px solid #ffe58f;
+      font-size: 0.83rem;
+      color: #856404;
+      line-height: 1.6;
+    }
+    #naver-guide ol { padding-left: 18px; }
+    #naver-output-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      background: #fafafa;
+    }
+    #naver-text-box {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.83rem;
+      font-family: 'Malgun Gothic', sans-serif;
+      resize: none;
+      margin-bottom: 14px;
+      background: white;
+    }
+    .url-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: white;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+    }
+    .url-item .url-thumb {
+      width: 80px;
+      height: 45px;
+      object-fit: cover;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .url-item .url-info { flex: 1; overflow: hidden; }
+    .url-item .url-title { font-size: 0.85rem; font-weight: bold; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .url-item .url-link  { font-size: 0.78rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .url-copy-btn {
+      padding: 6px 14px;
+      background: #00AEEF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .url-copy-btn:hover { background: #0090CC; }
+    #naver-box-footer {
+      padding: 12px 20px;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    #copy-btn {
+      padding: 9px 24px;
+      background: #03c75a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    #copy-btn:hover { background: #02a84a; }
+    #naver-close-btn {
+      padding: 9px 24px;
+      background: #eee;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    /* ── 관리자 모드 ── */
+    #admin-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #ccc;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 500;
+      transition: background 0.2s;
+    }
+    #admin-toggle.on { background: #00AEEF; }
+
+    .admin-only { display: none; }
+    body.admin-mode .admin-only { display: flex; }
+    body.admin-mode #add-section { display: block; }
+    #add-section { display: none; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.82rem;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>유튜브 모음 블로그</h1>
+  <p>관심 있는 유튜브 영상을 한 곳에서 모아보세요</p>
+</header>
+
+<!-- 카테고리 탭 -->
+<div id="tab-bar">
+  <button class="tab-btn active" data-cat="all">전체</button>
+</div>
+
+<main>
+  <!-- 영상 추가 폼 -->
+  <div id="add-section">
+    <h2>+ 영상 추가</h2>
+    <div class="form-row">
+      <input type="text" id="in-url"   placeholder="유튜브 URL (예: https://www.youtube.com/watch?v=xxxxx)" />
+      <input type="text" id="in-title" placeholder="제목" />
+    </div>
+    <div class="form-row">
+      <input type="text"   id="in-cat"  placeholder="카테고리 (예: 먹방, 여행, 공부)" />
+      <input type="text"   id="in-date" placeholder="날짜 (예: 2026-04-27)" />
+    </div>
+    <div class="form-row">
+      <textarea id="in-desc" placeholder="설명 (선택)"></textarea>
+    </div>
+    <button id="add-btn">추가하기</button>
+    <button id="naver-btn">네이버 블로그 글 생성</button>
+    <button id="export-btn" class="io-btn">JSON 내보내기</button>
+    <label id="import-label" class="io-btn">JSON 가져오기<input type="file" id="import-file" accept=".json"/></label>
+
+  </div>
+
+  <!-- 검색 -->
+  <div id="search-bar">
+    <input type="text" id="search-input" placeholder="제목 검색..." oninput="renderCards()" />
+  </div>
+
+  <!-- 카드 그리드 -->
+  <div class="video-grid" id="grid"></div>
+  <div id="empty-msg">등록된 영상이 없습니다.</div>
+</main>
+
+<!-- 수정 모달 -->
+<div id="edit-overlay">
+  <div id="edit-box">
+    <h3>영상 정보 수정</h3>
+    <div class="form-row"><input type="text" id="edit-title" placeholder="제목" /></div>
+    <div class="form-row"><input type="text" id="edit-cat"   placeholder="카테고리" /></div>
+    <div class="form-row"><input type="text" id="edit-date"  placeholder="날짜 (예: 2026-04-27)" /></div>
+    <div class="form-row"><textarea id="edit-desc" placeholder="설명 (선택)"></textarea></div>
+    <div id="edit-box-footer">
+      <button id="edit-cancel-btn" onclick="closeEdit()">취소</button>
+      <button id="edit-save-btn"   onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 네이버 블로그 글 생성 모달 -->
+<div id="naver-overlay">
+  <div id="naver-box">
+    <div id="naver-box-header">
+      <h3>네이버 블로그 붙여넣기용 글</h3>
+      <span onclick="closeNaver()">&#x2715;</span>
+    </div>
+    <div id="naver-guide">
+      <ol>
+        <li><b>글 텍스트 복사</b> 버튼으로 본문 틀을 복사 → 네이버 블로그에 붙여넣기</li>
+        <li>에디터 툴바 <b>"동영상"</b> 버튼 클릭 → 아래 URL을 하나씩 복사해서 삽입</li>
+        <li>영상 순서대로 반복 후 게시</li>
+      </ol>
+    </div>
+    <div id="naver-output-wrap"></div>
+    <div id="naver-box-footer">
+      <button id="naver-close-btn" onclick="closeNaver()">닫기</button>
+      <button id="copy-btn" onclick="copyNaverText()">글 텍스트 복사</button>
+    </div>
+  </div>
+</div>
+
+
+<button id="admin-toggle" title="관리자 모드">&#x1F512;</button>
+<footer>유튜브 모음 블로그 &copy; 2026</footer>
+
+<script>
+  /* ─── 데이터 ─── */
+  const STORAGE_KEY = 'yt_blog_videos';
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+  function save(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  /* ─── 유튜브 ID 추출 ─── */
+  function extractId(url) {
+    const patterns = [
+      /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/,
+    ];
+    for (const p of patterns) {
+      const m = url.match(p);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
+  /* ─── 카테고리 탭 렌더 ─── */
+  let currentCat = 'all';
+
+  function renderTabs(data) {
+    const cats = ['all', ...new Set(data.map(v => v.cat).filter(Boolean))];
+    const bar = document.getElementById('tab-bar');
+    bar.innerHTML = cats.map(c =>
+      `<button class="tab-btn ${c === currentCat ? 'active' : ''}"
+        data-cat="${c}">${c === 'all' ? '전체' : c}</button>`
+    ).join('');
+    bar.querySelectorAll('.tab-btn').forEach(btn =>
+      btn.addEventListener('click', () => {
+        currentCat = btn.dataset.cat;
+        renderTabs(load());
+        renderCards();
+      })
+    );
+  }
+
+  /* ─── 카드 렌더 ─── */
+  function renderCards() {
+    const data = load();
+    const query = document.getElementById('search-input').value.trim().toLowerCase();
+    const filtered = data.filter(v => {
+      const catOk = currentCat === 'all' || v.cat === currentCat;
+      const searchOk = !query || v.title.toLowerCase().includes(query);
+      return catOk && searchOk;
+    });
+
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty-msg');
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    grid.innerHTML = filtered.map((v) => {
+
+      const idx = data.indexOf(v);
+      const thumb = `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`;
+      return `
+        <div class="card" draggable="true" data-idx="${idx}">
+          <div class="thumb-wrap" onclick="openModal('${v.id}')">
+            <img src="${thumb}" alt="${v.title}" loading="lazy" />
+            <div class="play-btn">
+              <svg viewBox="0 0 68 48" xmlns="http://www.w3.org/2000/svg">
+                <path d="M66.5 7.7C65.7 4.8 63.4 2.5 60.5 1.7 55.2 0 34 0 34 0S12.8 0 7.5 1.7C4.6 2.5 2.3 4.8 1.5 7.7 0 13 0 24 0 24s0 11 1.5 16.3c.8 2.9 3.1 5.2 6 6C12.8 48 34 48 34 48s21.2 0 26.5-1.7c2.9-.8 5.2-3.1 6-6C68 35 68 24 68 24s0-11-1.5-16.3z" fill="#00AEEF"/>
+                <path d="M27 34.5l17.5-10.5L27 13.5v21z" fill="#fff"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="category">${v.cat || '일반'}</div>
+            <h3>${v.title}</h3>
+            ${v.desc ? `<p>${v.desc}</p>` : ''}
+            <div class="date">${v.date || ''}
+              <span style="float:right;display:flex;gap:8px;" class="admin-only">
+                <span style="cursor:pointer;color:#00AEEF;" onclick="editVideo(${idx})" title="수정">&#x270E;</span>
+                <span style="cursor:pointer;color:#ccc;" onclick="removeVideo(${idx})" title="삭제">&#x1F5D1;</span>
+              </span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    initDrag();
+  }
+
+  /* ─── 영상 추가 ─── */
+  document.getElementById('add-btn').addEventListener('click', () => {
+    const url   = document.getElementById('in-url').value.trim();
+    const title = document.getElementById('in-title').value.trim();
+    const cat   = document.getElementById('in-cat').value.trim();
+    const date  = document.getElementById('in-date').value.trim();
+    const desc  = document.getElementById('in-desc').value.trim();
+
+    if (!url || !title) { alert('URL과 제목을 입력해주세요.'); return; }
+    const id = extractId(url);
+    if (!id) { alert('올바른 유튜브 URL을 입력해주세요.'); return; }
+
+    const data = load();
+    data.unshift({ id, title, cat, date, desc });
+    save(data);
+
+    ['in-url','in-title','in-cat','in-date','in-desc'].forEach(el =>
+      document.getElementById(el).value = '');
+
+    renderTabs(data);
+    renderCards();
+  });
+
+  /* ─── 영상 삭제 ─── */
+  function removeVideo(idx) {
+    if (!isAdmin) { alert('관리자 모드에서만 삭제할 수 있습니다.'); return; }
+    if (!confirm('이 영상을 삭제할까요?')) return;
+    const data = load();
+    data.splice(idx, 1);
+    save(data);
+    renderTabs(data);
+    renderCards();
+  }
+
+  /* ─── 영상 수정 ─── */
+  let editIdx = -1;
+
+  function editVideo(idx) {
+    if (!isAdmin) { alert('관리자 모드에서만 수정할 수 있습니다.'); return; }
+    const data = load();
+    const v = data[idx];
+    editIdx = idx;
+    document.getElementById('edit-title').value = v.title || '';
+    document.getElementById('edit-cat').value   = v.cat   || '';
+    document.getElementById('edit-date').value  = v.date  || '';
+    document.getElementById('edit-desc').value  = v.desc  || '';
+    document.getElementById('edit-overlay').classList.add('open');
+  }
+
+  function closeEdit() {
+    document.getElementById('edit-overlay').classList.remove('open');
+    editIdx = -1;
+  }
+
+  function saveEdit() {
+    if (!isAdmin || editIdx < 0) return;
+    const data = load();
+    data[editIdx].title = document.getElementById('edit-title').value.trim();
+    data[editIdx].cat   = document.getElementById('edit-cat').value.trim();
+    data[editIdx].date  = document.getElementById('edit-date').value.trim();
+    data[editIdx].desc  = document.getElementById('edit-desc').value.trim();
+    save(data);
+    closeEdit();
+    renderTabs(data);
+    renderCards();
+  }
+
+  document.getElementById('edit-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('edit-overlay')) closeEdit();
+  });
+
+  /* ─── 유튜브 새 탭으로 열기 ─── */
+  function openModal(videoId) {
+    window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
+  }
+
+  /* ─── 네이버 블로그 글 생성 ─── */
+  let naverPlainText = '';
+
+  document.getElementById('naver-btn').addEventListener('click', () => {
+    const data = load();
+    if (data.length === 0) { alert('추가된 영상이 없습니다.'); return; }
+
+    const today = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+
+    // 본문 텍스트 생성
+    const groups = {};
+    data.forEach(v => {
+      const cat = v.cat || '일반';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(v);
+    });
+
+    let text = `[유튜브 모음] 추천 영상 ${data.length}개\n작성일: ${today}\n`;
+    Object.entries(groups).forEach(([cat, videos]) => {
+      text += `\n[ ${cat} ]\n`;
+      videos.forEach((v, i) => {
+        text += `${i+1}. ${v.title}`;
+        if (v.date) text += ` (${v.date})`;
+        text += '\n';
+        if (v.desc) text += `   ${v.desc}\n`;
+      });
+    });
+    naverPlainText = text;
+
+    // URL 목록 렌더
+    const wrap = document.getElementById('naver-output-wrap');
+    let inner = `<textarea id="naver-text-box" readonly>${text}</textarea>`;
+    inner += `<p style="font-size:0.82rem;color:#888;margin-bottom:10px;">아래 URL을 하나씩 복사해서 에디터 [동영상] 버튼에 붙여넣으세요</p>`;
+    data.forEach((v, i) => {
+      const url   = `https://www.youtube.com/watch?v=${v.id}`;
+      const thumb = `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`;
+      inner += `
+        <div class="url-item">
+          <img class="url-thumb" src="${thumb}" />
+          <div class="url-info">
+            <div class="url-title">${v.title}</div>
+            <div class="url-link">${url}</div>
+          </div>
+          <button class="url-copy-btn" onclick="copyUrl('${url}', this)">URL 복사</button>
+        </div>`;
+    });
+    wrap.innerHTML = inner;
+
+    document.getElementById('naver-overlay').classList.add('open');
+  });
+
+  function copyUrl(url, btn) {
+    navigator.clipboard.writeText(url).then(() => {
+      btn.textContent = '복사됨!';
+      setTimeout(() => btn.textContent = 'URL 복사', 2000);
+    });
+  }
+
+  function closeNaver() {
+    document.getElementById('naver-overlay').classList.remove('open');
+  }
+
+  function copyNaverText() {
+    navigator.clipboard.writeText(naverPlainText).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = '복사됨!';
+      setTimeout(() => btn.textContent = '글 텍스트 복사', 2000);
+    });
+  }
+
+  document.getElementById('naver-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('naver-overlay')) closeNaver();
+  });
+
+  /* ─── 관리자 모드 ─── */
+  const ADMIN_PW = '1379';  // ← 비밀번호 여기서 변경
+
+  let isAdmin = sessionStorage.getItem('admin') === 'true';
+  function applyAdmin() {
+    if (isAdmin) {
+      document.body.classList.add('admin-mode');
+      document.getElementById('admin-toggle').classList.add('on');
+      document.getElementById('admin-toggle').textContent = '🔓';
+    } else {
+      document.body.classList.remove('admin-mode');
+      document.getElementById('admin-toggle').classList.remove('on');
+      document.getElementById('admin-toggle').textContent = '🔒';
+    }
+    renderCards();
+  }
+
+  document.getElementById('admin-toggle').addEventListener('click', () => {
+    if (isAdmin) {
+      isAdmin = false;
+      sessionStorage.removeItem('admin');
+      applyAdmin();
+    } else {
+      const pw = prompt('관리자 비밀번호를 입력하세요:');
+      if (pw === ADMIN_PW) {
+        isAdmin = true;
+        sessionStorage.setItem('admin', 'true');
+        applyAdmin();
+      } else if (pw !== null) {
+        alert('비밀번호가 틀렸습니다.');
+      }
+    }
+  });
+
+  /* ─── 드래그로 순서 변경 ─── */
+  let dragSrcIdx = null;
+
+  function initDrag() {
+    document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        dragSrcIdx = parseInt(card.dataset.idx);
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+      });
+      card.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+        card.classList.add('drag-over');
+      });
+      card.addEventListener('drop', e => {
+        e.preventDefault();
+        const dropIdx = parseInt(card.dataset.idx);
+        if (dragSrcIdx === null || dragSrcIdx === dropIdx) return;
+        const data = load();
+        const moved = data.splice(dragSrcIdx, 1)[0];
+        data.splice(dropIdx, 0, moved);
+        save(data);
+        renderTabs(data);
+        renderCards();
+      });
+    });
+  }
+
+  /* ─── JSON 내보내기 ─── */
+  document.getElementById('export-btn').addEventListener('click', () => {
+    const data = load();
+    if (data.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'videos.json';
+    a.click();
+  });
+
+  /* ─── JSON 가져오기 ─── */
+  document.getElementById('import-file').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!Array.isArray(data)) throw new Error();
+        save(data);
+        renderTabs(data);
+        renderCards();
+        alert(`${data.length}개 영상을 불러왔습니다.`);
+      } catch {
+        alert('올바른 JSON 파일이 아닙니다.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  /* ─── GitHub Pages용 videos.json 자동 로드 ─── */
+  async function initData() {
+    // localhost가 아닌 경우(GitHub Pages 등) videos.json 자동 로드 시도
+    if (location.protocol !== 'file:' && load().length === 0) {
+      try {
+        const res = await fetch('./videos.json');
+        if (res.ok) {
+          const data = await res.json();
+          save(data);
+        }
+      } catch {}
+    }
+    renderTabs(load());
+    renderCards();
+  }
+
+  /* ─── 초기화 ─── */
+  applyAdmin();
+  initData();
+</script>
+</body>
+</html>
